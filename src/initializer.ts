@@ -1,32 +1,28 @@
-import { StreamBuilder, createStreamBuilder } from "./streamBuilder";
+import { NodeBuilder, createNodeBuilder } from "./nodeBuilder";
 import { Parser, inferParser } from "./types/parser";
 
-type StreamBuilderDef<TContext, TInputParser extends Parser> = {
-  parser: TInputParser | null;
+type NodeBuilderDef<TContext, TInput> = {
+  parser: Parser | null;
   getContext: () => TContext;
 };
 
-export type StreamBuilderInitializer<TContext, TInputParser extends Parser> = {
-  _def: StreamBuilderDef<TContext, TInputParser>;
-  context: <TC>(
-    getContext: () => TC
-  ) => StreamBuilderInitializer<TC, TInputParser>;
-  input: <TP extends Parser>(
-    parser: TP
-  ) => StreamBuilderInitializer<TContext, TP>;
-  create: () => StreamBuilder<
-    any,
-    any,
+export type NodeBuilderInitializer<TContext, TInput = undefined> = {
+  _def: NodeBuilderDef<TContext, TInput>;
+  context: <TC>(getContext: () => TC) => NodeBuilderInitializer<TC, TInput>;
+  input: <TInput, TArgs extends [Parser] | [] = []>(
+    ...args: TArgs
+  ) => NodeBuilderInitializer<
     TContext,
-    inferParser<TInputParser>["out"]
+    TArgs extends [Parser] ? inferParser<TArgs[0]>["out"] : TInput
   >;
+  create: () => NodeBuilder<any, any, TContext, TInput>;
 };
 
-function createNewInitializer<TContext, TInputParser extends Parser>(
-  prevDef: StreamBuilderDef<any, any>,
-  newDef: Partial<StreamBuilderDef<TContext, TInputParser>>
-): StreamBuilderInitializer<TContext, TInputParser> {
-  const def: StreamBuilderDef<TContext, TInputParser> = {
+function createNewInitializer<TContext, TInput = undefined>(
+  prevDef: NodeBuilderDef<any, any>,
+  newDef: Partial<NodeBuilderDef<TContext, TInput>>
+): NodeBuilderInitializer<TContext, TInput> {
+  const def: NodeBuilderDef<TContext, TInput> = {
     ...prevDef,
     ...newDef,
   };
@@ -34,10 +30,10 @@ function createNewInitializer<TContext, TInputParser extends Parser>(
   return createInitializer(def);
 }
 
-export function createInitializer<TContext, TInputParser extends Parser>(
-  initDef?: Partial<StreamBuilderDef<TContext, TInputParser>>
-): StreamBuilderInitializer<TContext, TInputParser> {
-  const def: StreamBuilderDef<TContext, TInputParser> = {
+export function createInitializer<TContext, TInput = undefined>(
+  initDef?: Partial<NodeBuilderDef<TContext, TInput>>
+): NodeBuilderInitializer<TContext, TInput> {
+  const def: NodeBuilderDef<TContext, TInput> = {
     parser: null,
     getContext: () => ({} as any),
     ...initDef,
@@ -45,18 +41,16 @@ export function createInitializer<TContext, TInputParser extends Parser>(
   return {
     _def: def,
     context: <TC>(getContext: () => TC) =>
-      createNewInitializer<TC, TInputParser>(def, { getContext }),
-    input: <TP extends Parser>(parser: TP) =>
-      createNewInitializer<TContext, TP>(def, {
-        parser,
+      createNewInitializer<TC, TInput>(def, { getContext }),
+    input: <TIn, TArgs extends [Parser] | []>(...args: TArgs) =>
+      createNewInitializer<
+        TContext,
+        TArgs extends [Parser] ? inferParser<TArgs[0]>["out"] : TIn
+      >(def, {
+        parser: args[0] ?? undefined,
       }),
     create: () => {
-      if (def.parser === null) {
-        return createStreamBuilder<any, any, TContext, null>({
-          getContext: def.getContext,
-        });
-      }
-      return createStreamBuilder<any, any, TContext, TInputParser>({
+      return createNodeBuilder<any, any, TContext, TInput>({
         inputParser: def.parser,
         getContext: def.getContext,
       });

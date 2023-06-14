@@ -1,3 +1,5 @@
 import { createInitializer } from "./initializer";
 
-export const initStreamBuilder = createInitializer();
+export * from "./nodeBuilder";
+
+export const initNodeBuilder = createInitializer();

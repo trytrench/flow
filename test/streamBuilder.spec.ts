@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { initStreamBuilder } from "../src";
+import { initNodeBuilder } from "../src";
 
 async function fetchApi() {
   return {
@@ -8,16 +8,19 @@ async function fetchApi() {
   };
 }
 
-describe("Stream Builder Test Suite", () => {
-  test("Test dependency between streams", async () => {
-    const streamBuilder = initStreamBuilder.create();
+describe("Node Builder Test Suite", () => {
+  test("Test dependency between nodes", async () => {
+    const nodeBuilder = initNodeBuilder.create();
 
-    const firstStream = streamBuilder.resolver(() => {
+    const firstNode = nodeBuilder.resolver(() => {
       return fetchApi();
     });
 
-    const secondStream = streamBuilder
-      .depend({ first: firstStream })
+    const secondNode = nodeBuilder
+      .depend({
+        first: firstNode,
+        second: { third: { fourth: firstNode } },
+      })
       .resolver(({ deps }) => {
         const { first } = deps;
         return {
@@ -26,43 +29,47 @@ describe("Stream Builder Test Suite", () => {
         };
       });
 
-    const result = await secondStream.run(null);
+    const result = await secondNode.run();
     expect(result.number2).toBe(2);
     expect(result.string2).toBe("stringsecond");
   });
 
-  test("Test error handling in streams", async () => {
-    const streamBuilder = initStreamBuilder.create();
+  test("Test error handling in nodes", async () => {
+    const nodeBuilder = initNodeBuilder.create();
 
-    const errorStream = streamBuilder.resolver(() => {
+    const errorNode = nodeBuilder.resolver(() => {
       throw new Error("Test error");
     });
 
     try {
-      await errorStream.run(null);
+      await errorNode.run();
     } catch (e) {
       expect(e.message).toBe("Test error");
     }
   });
 
-  test("Test plugin system in streams", async () => {
-    const streamBuilder = initStreamBuilder.create();
+  test("Test then system in nodes", async () => {
+    const nodeBuilder = initNodeBuilder.create();
 
-    const fetchStream = streamBuilder.resolver(() => {
+    const fetchNode = nodeBuilder.resolver(() => {
       return fetchApi();
     });
 
-    const pluginStream = streamBuilder.depend({ first: fetchStream }).plugin({
-      feedInput: async (opts) => opts.deps.first,
-      plugin: async (input) => {
-        return {
-          string3: input.string + "third",
-          number3: input.number + 2,
-        };
-      },
-    });
+    const pluginNode = nodeBuilder
+      .depend({
+        first: fetchNode.then((res) => {
+          return {
+            string3: res.string + "third",
+            number3: res.number + 2,
+          };
+        }),
+      })
+      .resolver(({ deps }) => {
+        const { first } = deps;
+        return first;
+      });
 
-    const result = await pluginStream.run(null);
+    const result = await pluginNode.run();
 
     expect(result.number3).toBe(3);
     expect(result.string3).toBe("stringthird");
