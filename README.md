@@ -90,5 +90,3 @@ windChillNode
     console.error(err);
   });
 ```
-
-With Flow, creating and running complex, type-safe Promise DAGs becomes a straightforward process, allowing you to focus on the logic of your application.
