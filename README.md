@@ -8,25 +8,6 @@ Flow enables you to define type-safe Promise Directed Acyclic Graphs (DAGs) and 
 npm i @trytrench/flow
 ```
 
-## Overview
-
-Flow is about structuring nodes that depend on each other and running these nodes optimally. A node, represented by the `node` object, is defined and then executed using an `input`:
-
-```typescript
-const node = nodeBuilder
-  .depend({ ... })
-  .resolve(({ ctx, input, deps }) => {
-    // processing logic here
-    return result;
-  });
-
-const output = await node.run(input);
-```
-
-<p align="left">
-	<img src="https://github.com/trytrench/flow/assets/19853022/dd524faf-d0bc-4394-9886-5ef8804a4453" width="600" alt="Flow diagram showing the execution process"/>
-</p>
-
 ## Using Flow
 
 Here is how you can utilize Flow in your code:
