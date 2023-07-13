@@ -258,41 +258,65 @@ function createNodeRunner<
     );
 
     const nodeOutputMap: Record<string, NodeOutputPayload<any>> = {};
+    const nodePromiseMap: Record<string, Promise<any>> = {};
+
+    const loadDeps = (deps: NodeDepsTree): Record<string, any> => {
+      return Object.fromEntries(
+        Object.entries(deps).map(([key, dep]) => {
+          if (dep._node) {
+            const t = dep as Node<any, any, any, any>;
+            const result = nodeOutputMap[t._def.id].result ?? null;
+            return [key, result];
+          } else {
+            const map = dep as NodeDepsTree;
+            return [key, loadDeps(map)];
+          }
+        })
+      );
+    };
+
+    const getPromisesToWaitFor = (deps: NodeDepsTree): Promise<any>[] => {
+      const allDeps = Object.values(deps).flatMap((dep) => {
+        if (dep._node) {
+          const t = dep as Node<any, any, any, any>;
+          // may need to check if null first
+          // it would be null with a cyclical dependency, for example.
+          return [nodePromiseMap[t._def.id]];
+        } else {
+          const map = dep as NodeDepsTree;
+          return getPromisesToWaitFor(map);
+        }
+      });
+
+      // Remove duplicates
+      return [...new Set(allDeps)];
+    };
 
     for (const node of sortedNodes) {
-      const loadDeps = (deps: NodeDepsTree): Record<string, any> => {
-        return Object.fromEntries(
-          Object.entries(deps).map(([key, dep]) => {
-            if (dep._node) {
-              const t = dep as Node<any, any, any, any>;
-              const result = nodeOutputMap[t._def.id].result ?? null;
-              return [key, result];
-            } else {
-              const map = dep as NodeDepsTree;
-              return [key, loadDeps(map)];
-            }
-          })
-        );
-      };
+      nodePromiseMap[node.id] = Promise.allSettled(
+        getPromisesToWaitFor(node.deps)
+      ).then(async (res) => {
+        try {
+          const depInputs = loadDeps(node.deps);
 
-      const depInputs = loadDeps(node.deps);
-
-      try {
-        nodeOutputMap[node.id] = {
-          success: true,
-          result: await node.resolver({
-            ctx: node.getContext(),
-            deps: depInputs,
-            input,
-          }),
-        };
-      } catch (e: any) {
-        nodeOutputMap[node.id] = {
-          success: false,
-          error: e.message ?? "Unknown error",
-        };
-      }
+          nodeOutputMap[node.id] = {
+            success: true,
+            result: await node.resolver({
+              ctx: node.getContext(),
+              deps: depInputs,
+              input,
+            }),
+          };
+        } catch (e: any) {
+          nodeOutputMap[node.id] = {
+            success: false,
+            error: e.message ?? "Unknown error",
+          };
+        }
+      });
     }
+
+    await nodePromiseMap[finalNodeId];
 
     let resultTree: ResultsTree<TDeps> = {} as any;
 
