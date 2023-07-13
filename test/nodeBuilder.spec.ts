@@ -65,9 +65,13 @@ describe("Node Builder Test Suite", () => {
           firstData: first,
         };
       });
-    const thirdNode = nodeBuilder.resolver(() => {
-      return fetchButDelayed(400);
-    });
+    const thirdNode = nodeBuilder
+      .depend({
+        first: firstNode,
+      })
+      .resolver(() => {
+        return fetchButDelayed(400);
+      });
 
     const fourthNode = nodeBuilder
       .depend({
@@ -88,7 +92,7 @@ describe("Node Builder Test Suite", () => {
     expect(result.string1).toBe("delayed!");
     expect(result.string2).toBe("delayed!");
     expect(result.string3).toBe("delayed!");
-  }, 600);
+  }, 800);
 
   test("Test error handling in nodes", async () => {
     const nodeBuilder = initNodeBuilder.create();

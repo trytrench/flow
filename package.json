@@ -1,6 +1,6 @@
 {
   "name": "@trytrench/flow",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Typescript DAG Execution",
   "license": "ISC",
   "main": "dist/index.cjs.js",
