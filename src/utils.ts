@@ -17,3 +17,18 @@ export function deepset(
   }, obj);
   return obj;
 }
+
+function createIdGenerator(): () => string {
+  function* idGenerator(): Generator<number> {
+    let id = 1;
+    while (true) {
+      yield id++;
+    }
+  }
+
+  const gen = idGenerator();
+
+  return () => gen.next().value.toString();
+}
+
+export const genId = createIdGenerator();

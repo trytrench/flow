@@ -1,5 +1,4 @@
-import { nanoid } from "nanoid";
-import { MaybePromise, deepset } from "./utils";
+import { MaybePromise, deepset, genId } from "./utils";
 import { Parser } from "./types/parser";
 
 export type NodeDepsTree = {
@@ -157,7 +156,7 @@ export function createNodeBuilder<
     resolver(resolver) {
       const finalBuilder = createNewNodeBuilder(_def, {
         resolver: resolver,
-        id: nanoid(),
+        id: genId(),
       });
 
       return createNodeFromDef(finalBuilder._def);
@@ -378,7 +377,7 @@ function createThenNodeCreator<
       TInput
     >(nodeDef, {
       resolver: newResolver,
-      id: nanoid(),
+      id: genId(),
     });
 
     return createNodeFromDef(finalBuilder._def);
